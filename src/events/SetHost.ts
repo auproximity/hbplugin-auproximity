@@ -1,6 +1,7 @@
-import AuproximityPlugin from "..";
 import { EventListener, Lobby } from "@skeldjs/hindenburg";
 import { PlayerSetHostEvent } from "@skeldjs/core";
+
+import AuproximityPlugin from "../hbplugin-auproximity";
 import { TransportOp } from "../TrackedGame";
 
 export default class {
