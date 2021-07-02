@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onPlayerMurder(ev: PlayerMurderEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
 
-        if (!trackedGame || !ev.victim.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerKill,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.victim.info.name
+                clientId: ev.player.id,
             }
         }));
     }

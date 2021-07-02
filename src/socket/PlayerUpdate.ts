@@ -1,5 +1,5 @@
 import { EventListener, Lobby } from "@skeldjs/hindenburg";
-import { PlayerSetColorEvent, PlayerSetHatEvent, PlayerSetNameEvent, PlayerSetSkinEvent } from "@skeldjs/core";
+import { PlayerExitVentEvent, PlayerSetColorEvent, PlayerSetHatEvent, PlayerSetNameEvent, PlayerSetSkinEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
 import { TransportOp } from "../TrackedGame";
@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onPlayerSetHost(ev: PlayerSetColorEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerUpdate,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info.name,
+                clientId: ev.player.id,
                 color: ev.newColor
             }
         }));
@@ -26,15 +26,15 @@ export default class extends AuproximityPlugin {
     onPlayerSetName(ev: PlayerSetNameEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerUpdate,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.oldName,
-                newName: ev.newName
+                clientId: ev.player.id,
+                name: ev.newName
             }
         }));
     }
@@ -43,14 +43,14 @@ export default class extends AuproximityPlugin {
     onPlayerSetHat(ev: PlayerSetHatEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerUpdate,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info.name,
+                clientId: ev.player.id,
                 hat: ev.newHat
             }
         }));
@@ -60,14 +60,14 @@ export default class extends AuproximityPlugin {
     onPlayerSetSkin(ev: PlayerSetSkinEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerUpdate,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info.name,
+                clientId: ev.player.id,
                 skin: ev.newSkin
             }
         }));

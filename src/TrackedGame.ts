@@ -26,7 +26,7 @@ export enum TransportOp {
     GameEnd = "GAME_END",
     MeetingStart = "MEETING_START",
     MeetingEnd = "MEETING_END",
-    PlayerKill = "PLAYER_KILLED",
+    PlayerKill = "PLAYER_KILL",
     ImpostorsUpdate = "IMPOSTORS_UPDATE",
     CamsPlayerJoin = "CAMS_PLAYER_JOIN",
     CamsPlayerLeave = "CAMS_PLAYER_LEAVE",

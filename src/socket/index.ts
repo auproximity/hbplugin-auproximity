@@ -8,7 +8,7 @@ import "./HostUpdate";
 import "./ImpostorsUpdate";
 import "./MeetingEnd";
 import "./MeetingStart";
-import "./PlayerKilled";
+import "./PlayerKill";
 import "./PlayerMove";
 import "./PlayerUpdate";
 import "./PlayerVentEnter";

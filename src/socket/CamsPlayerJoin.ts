@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onPlayerJoinCameras(ev: SecurityCameraJoinEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
 
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.CamsPlayerJoin,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info?.name
+                clientId: ev.player.id,
             }
         }));
     }

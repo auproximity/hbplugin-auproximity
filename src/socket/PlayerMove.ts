@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onPlayerMove(ev: PlayerMoveEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerMove,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info.name,
+                clientId: ev.player.id,
                 x: ev.position.x,
                 y: ev.position.y
             }

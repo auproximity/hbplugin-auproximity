@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onPlayerEnterVent(ev: PlayerEnterVentEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
         
-        if (!trackedGame || !ev.player.info?.name)
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.PlayerVentEnter,
             d: {
                 gameCode: trackedGame.lobby.code,
-                name: ev.player.info.name,
+                clientId: ev.player.id,
                 ventId: ev.ventid
             }
         }));

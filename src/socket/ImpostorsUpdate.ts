@@ -16,9 +16,8 @@ export default class extends AuproximityPlugin {
             op: TransportOp.ImpostorsUpdate,
             d: {
                 gameCode: trackedGame.lobby.code,
-                names: ev.impostors
-                    .filter(impostor => !!impostor.info?.name)
-                    .map(impostor => impostor.info!.name)
+                clientIds: ev.impostors
+                    .map(impostor => impostor.id)
             }
         }));
     }
