@@ -18,5 +18,20 @@ export enum TransportOp {
     Hello = "HELLO",
     Error = "ERROR",
     Destroyed = "DESTROYED",
-    HostUpdate = "HOST_UPDATE"
+    HostUpdate = "HOST_UPDATE",
+    PlayerMove = "PLAYER_MOVE",
+    PlayerUpdate = "PLAYER_UPDATE",
+    SettingsUpdate = "SETTINGS_UPDATE",
+    GameStart = "GAME_START",
+    GameEnd = "GAME_END",
+    MeetingStart = "MEETING_START",
+    MeetingEnd = "MEETING_END",
+    PlayerKill = "PLAYER_KILLED",
+    ImpostorsUpdate = "IMPOSTORS_UPDATE",
+    CamsPlayerJoin = "CAMS_PLAYER_JOIN",
+    CamsPlayerLeave = "CAMS_PLAYER_LEAVE",
+    CommsSabotage = "COMMS_SABOTAGE",
+    CommsRepair = "COMMS_REPAIR",
+    PlayerVentEnter = "PlAYER_VENT_ENTER",
+    PlayerVentExit = "PLAYER_VENT_EXIT"
 }
