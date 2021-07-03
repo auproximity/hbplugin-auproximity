@@ -12,6 +12,8 @@ import {
     TransportOp,
     IdentifyError
 } from "./TrackedGame";
+import { SystemType } from "@skeldjs/constant";
+import { HudOverrideSystem, SecurityCameraSystem } from "@skeldjs/core";
 
 @HindenburgPlugin({
     id: "hbplugin-auproximity",
@@ -79,7 +81,7 @@ export default class extends Plugin {
                     }
                 }));
 
-                this.sendStateUpdate(trackedGame);
+                this.sendInitialState(trackedGame);
 
                 socket.on("close", () => {
                     this.trackedGames.delete(serverLobby);
@@ -97,8 +99,8 @@ export default class extends Plugin {
         }
     }
 
-    sendStateUpdate(trackedGame: TrackedGame) {
-        // todo: look into this and see what else needs sending
+    sendInitialState(trackedGame: TrackedGame) {
+        const sendImpostors = [];
         for (const [ , player ] of trackedGame.lobby.players) {
             if (player.info) {
                 trackedGame.socket.send(JSON.stringify({
@@ -110,6 +112,106 @@ export default class extends Plugin {
                         color: player.info.color,
                         hat: player.info.hat,
                         skin: player.info.skin
+                    }
+                }));
+
+                if (player.info.isDead) {
+                    trackedGame.socket.send(JSON.stringify({
+                        op: TransportOp.PlayerKill,
+                        d: {
+                            gameCode: trackedGame.lobby.code,
+                            clientId: player.id
+                        }
+                    }));
+                }
+
+                if (player.info.isImpostor) {
+                    sendImpostors.push(player);
+                }
+
+                if (player.transform) {
+                    trackedGame.socket.send(JSON.stringify({
+                        op: TransportOp.PlayerMove,
+                        d: {
+                            gameCode: trackedGame.lobby.code,
+                            clientId: player.id,
+                            x: player.transform.position.x,
+                            y: player.transform.position.y
+                        }
+                    }));
+                }
+
+                if (player.physics?.ventid !== -1) {
+                    trackedGame.socket.send(JSON.stringify({
+                        op: TransportOp.PlayerVentEnter,
+                        d: {
+                            gameCode: trackedGame.lobby.code,
+                            clientId: player.id,
+                            ventId: player.physics.ventid
+                        }
+                    }));
+                }
+            }
+        }
+
+        if (sendImpostors.length) {
+            trackedGame.socket.send(JSON.stringify({
+                op: TransportOp.ImpostorsUpdate,
+                d: {
+                    gameCode: trackedGame.lobby.code,
+                    clientIds: sendImpostors.map(player => player.id)
+                }
+            }));
+        }
+
+        trackedGame.socket.send(JSON.stringify({
+            op: TransportOp.SettingsUpdate,
+            d: {
+                gameCode: trackedGame.lobby.code,
+                map: trackedGame.lobby.settings.map,
+                crewmateVision: trackedGame.lobby.settings.crewmateVision
+            }
+        }));
+
+        if (trackedGame.lobby.started) {
+            trackedGame.socket.send(JSON.stringify({
+                op: TransportOp.GameStart,
+                d: {
+                    gameCode: trackedGame.lobby.code
+                }
+            }));
+        }
+
+        if (trackedGame.lobby.meetinghud) {
+            trackedGame.socket.send(JSON.stringify({
+                op: TransportOp.MeetingStart,
+                d: {
+                    gameCode: trackedGame.lobby.code
+                }
+            }));
+        }
+
+        const shipstatus = trackedGame.lobby.shipstatus;
+        if (shipstatus) {
+            const security = shipstatus.systems[SystemType.Security as keyof typeof shipstatus.systems] as unknown as SecurityCameraSystem<Lobby>;
+            if (security) {
+                for (const player of security.players) {
+                    trackedGame.socket.send(JSON.stringify({
+                        op: TransportOp.CamsPlayerJoin,
+                        d: {
+                            gameCode: trackedGame.lobby.code,
+                            clientId: player.id
+                        }
+                    }));
+                }
+            }
+
+            const comms = shipstatus.systems[SystemType.Communications as keyof typeof shipstatus.systems] as unknown as HudOverrideSystem<Lobby>;
+            if (comms.sabotaged) {
+                trackedGame.socket.send(JSON.stringify({
+                    op: TransportOp.CommsSabotage,
+                    d: {
+                        gameCode: trackedGame.lobby.code
                     }
                 }));
             }

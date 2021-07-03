@@ -1,7 +1,7 @@
 {
   "name": "hbplugin-auproximity",
   "main": "./dist/index.js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "build": "tsc -p ./",
     "prepack": "rm -rf dist && yarn build",
