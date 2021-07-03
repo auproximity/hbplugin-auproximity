@@ -8,4 +8,5 @@ real-world example.
 ## Installation
 You can install the plugin in two ways:
 * Running `yarn install-plugin hbplugin-auproximity` in your Hindenburg directory.
-* `git clone`-ing this repository into your Hindenburg plugin directory.
+* `git clone`-ing this repository into your Hindenburg plugin directory. (Make
+sure to `yarn install` and `yarn build`)
