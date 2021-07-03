@@ -12,13 +12,23 @@ export default class extends AuproximityPlugin {
         if (!trackedGame)
             return;
 
-        trackedGame.socket.send(JSON.stringify({
-            op: TransportOp.SettingsUpdate,
-            d: {
-                gameCode: trackedGame.lobby.code,
-                map: ev.settings.map,
-                crewmateVision: ev.settings.crewmateVision
-            }
-        }));
+        const dataObject: any = {
+            gameCode: trackedGame.lobby.code,
+        };
+
+        if (trackedGame.lastSettings.map !== ev.settings.map) {
+            dataObject.map = ev.settings.map;
+        }
+
+        if (trackedGame.lastSettings.crewmateVision !== ev.settings.crewmateVision) {
+            dataObject.crewmateVision = ev.settings.crewmateVision;
+        }
+
+        if ("map" in dataObject || "crewmateVision" in dataObject) {
+            trackedGame.socket.send(JSON.stringify({
+                op: TransportOp.SettingsUpdate,
+                d: dataObject
+            }));
+        }
     }
 }

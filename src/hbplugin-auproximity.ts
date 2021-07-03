@@ -98,6 +98,7 @@ export default class extends Plugin {
     }
 
     sendStateUpdate(trackedGame: TrackedGame) {
+        // todo: look into this and see what else needs sending
         for (const [ , player ] of trackedGame.lobby.players) {
             if (player.info) {
                 trackedGame.socket.send(JSON.stringify({

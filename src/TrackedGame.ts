@@ -1,12 +1,17 @@
 import ws from "ws";
 
 import { Lobby } from "@skeldjs/hindenburg";
+import { GameOptions } from "@skeldjs/protocol";
 
 export class TrackedGame {
+    lastSettings: GameOptions;
+
     constructor(
         public readonly lobby: Lobby,
         public readonly socket: ws
-    ) {}
+    ) {
+        this.lastSettings = new GameOptions(lobby.settings);
+    }
 }
 
 export enum IdentifyError {
