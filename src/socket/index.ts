@@ -1,7 +1,8 @@
 import "./CamsPlayerJoin";
 import "./CamsPlayerLeave";
 import "./CommsRepair";
-import "./CommsRepair";
+import "./CommsSabotage";
+import "./Destroy";
 import "./GameEnd";
 import "./GameStart";
 import "./HostUpdate";

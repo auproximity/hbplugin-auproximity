@@ -17,7 +17,7 @@ export enum IdentifyError {
 export enum TransportOp {
     Hello = "HELLO",
     Error = "ERROR",
-    Destroyed = "DESTROYED",
+    Destroy = "DESTROY",
     HostUpdate = "HOST_UPDATE",
     PlayerMove = "PLAYER_MOVE",
     PlayerUpdate = "PLAYER_UPDATE",
