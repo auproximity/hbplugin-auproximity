@@ -30,7 +30,7 @@ export default class extends Plugin {
 
         this.trackedGames = new Map;
 
-        this.wsSocket = new ws.Server({ port: 22029 });
+        this.wsSocket = new ws.Server({ port: 22044 });
         this.wsSocket.on("connection", (socket, req) => {
             const ipAddr = (req.headers["x-forwarded-for"] as unknown as string || req.socket.remoteAddress) as unknown as string;
 
@@ -80,6 +80,10 @@ export default class extends Plugin {
                 }));
 
                 this.sendStateUpdate(trackedGame);
+
+                socket.on("close", () => {
+                    this.trackedGames.delete(serverLobby);
+                });
             } else {
                 socket.send(JSON.stringify({
                     op: TransportOp.Error,
@@ -94,12 +98,28 @@ export default class extends Plugin {
     }
 
     sendStateUpdate(trackedGame: TrackedGame) {
-        if (trackedGame.lobby.host?.info?.name) {
+        for (const [ , player ] of trackedGame.lobby.players) {
+            if (player.info) {
+                trackedGame.socket.send(JSON.stringify({
+                    op: TransportOp.PlayerUpdate,
+                    d: {
+                        gameCode: trackedGame.lobby.code,
+                        clientId: player.id,
+                        name: player.info.name,
+                        color: player.info.color,
+                        hat: player.info.hat,
+                        skin: player.info.skin
+                    }
+                }));
+            }
+        }
+
+        if (trackedGame.lobby.host?.id) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.HostUpdate,
                 d: {
                     gameCode: trackedGame.lobby.code,
-                    name: trackedGame.lobby.host.info.name
+                    clientId: trackedGame.lobby.host.id
                 }
             }));
         } else {
