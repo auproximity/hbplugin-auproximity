@@ -9,14 +9,14 @@ export default class extends AuproximityPlugin {
     onMeetingEnd(ev: MeetingHudVotingCompleteEvent<Lobby>) {
         const trackedGame = this.trackedGames.get(ev.room);
 
-        if (!trackedGame || (ev.ejected && !ev.ejected.info?.name))
+        if (!trackedGame)
             return;
 
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.MeetingEnd,
             d: {
                 gameCode: trackedGame.lobby.code,
-                ejected: ev.ejected?.info?.name
+                ejectedClientId: ev.ejected?.id
             }
         }));
     }
