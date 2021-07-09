@@ -1,13 +1,13 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { PlayerSetImpostorsEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "player.setimpostors")
-    onSetImpostors(ev: PlayerSetImpostorsEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onSetImpostors(ev: PlayerSetImpostorsEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
 
         if (!trackedGame)
             return;
@@ -15,7 +15,7 @@ export default class extends AuproximityPlugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.ImpostorsUpdate,
             d: {
-                gameCode: trackedGame.lobby.code,
+                gameCode: trackedGame.room.code,
                 clientIds: ev.impostors
                     .map(impostor => impostor.id)
             }

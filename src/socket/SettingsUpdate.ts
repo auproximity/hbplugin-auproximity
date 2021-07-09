@@ -1,19 +1,19 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { PlayerSyncSettingsEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "player.syncsettings")
-    onPlayerSetHost(ev: PlayerSyncSettingsEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onPlayerSetHost(ev: PlayerSyncSettingsEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
 
         if (!trackedGame)
             return;
 
         const dataObject: any = {
-            gameCode: trackedGame.lobby.code,
+            gameCode: trackedGame.room.code,
         };
 
         if (trackedGame.lastSettings.map !== ev.settings.map) {

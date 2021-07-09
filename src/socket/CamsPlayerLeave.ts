@@ -1,13 +1,13 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { SecurityCameraLeaveEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "security.cameras.leave")
-    onPlayerLeavesCameras(ev: SecurityCameraLeaveEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onPlayerLeavesCameras(ev: SecurityCameraLeaveEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
 
         if (!trackedGame)
             return;
@@ -15,7 +15,7 @@ export default class extends AuproximityPlugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.CamsPlayerLeave,
             d: {
-                gameCode: trackedGame.lobby.code,
+                gameCode: trackedGame.room.code,
                 clientId: ev.player.id,
             }
         }));

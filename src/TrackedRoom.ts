@@ -1,26 +1,31 @@
 import ws from "ws";
 
-import { Lobby } from "@skeldjs/hindenburg";
+import { Room } from "@skeldjs/hindenburg";
 import { GameOptions } from "@skeldjs/protocol";
 
 export class TrackedGame {
     lastSettings: GameOptions;
+    receivedPong: boolean;
 
     constructor(
-        public readonly lobby: Lobby,
+        public readonly room: Room,
         public readonly socket: ws
     ) {
-        this.lastSettings = new GameOptions(lobby.settings);
+        this.lastSettings = new GameOptions(room.settings);
+        this.receivedPong = true;
     }
 }
 
 export enum IdentifyError {
     GameNotFound = "GAME_NOT_FOUND",
-    AlreadyTracked = "ALREADY_TRACKED"
+    AlreadyTracked = "ALREADY_TRACKED",
+    FailedToPong = "FAILED_TO_PONG"
 }
 
 export enum TransportOp {
     Hello = "HELLO",
+    Ping = "PING",
+    Pong = "PONG",
     Error = "ERROR",
     Destroy = "DESTROY",
     HostUpdate = "HOST_UPDATE",

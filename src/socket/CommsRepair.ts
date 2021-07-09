@@ -1,13 +1,13 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { SystemRepairEvent, SystemType } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "system.repair")
-    onSystemRepair(ev: SystemRepairEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onSystemRepair(ev: SystemRepairEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
 
         if (!trackedGame)
             return;
@@ -16,7 +16,7 @@ export default class extends AuproximityPlugin {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.CommsRepair,
                 d: {
-                    gameCode: trackedGame.lobby.code
+                    gameCode: trackedGame.room.code
                 }
             }));
         }

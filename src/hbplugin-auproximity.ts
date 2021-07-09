@@ -1,19 +1,31 @@
 import ws from "ws";
+import util from "util";
+import dns from "dns";
 
 import {
     HindenburgPlugin,
     Plugin,
-    Lobby,
+    Room,
     Worker
 } from "@skeldjs/hindenburg";
 
 import {
-    TrackedGame,
+    TrackedGame as TrackedRoom,
     TransportOp,
-    IdentifyError
-} from "./TrackedGame";
+    IdentifyError as SocketError
+} from "./TrackedRoom";
 import { SystemType } from "@skeldjs/constant";
 import { HudOverrideSystem, SecurityCameraSystem } from "@skeldjs/core";
+
+export interface AuproximityConfig {
+    host: string;
+    pingInterval: number;
+    sourceWhitelist: string[];
+}
+
+const CUSTOM_SERVER_PORT = 22044;
+
+const resolveDns = util.promisify(dns.resolve);
 
 @HindenburgPlugin({
     id: "hbplugin-auproximity",
@@ -21,20 +33,38 @@ import { HudOverrideSystem, SecurityCameraSystem } from "@skeldjs/core";
     order: "none"
 })
 export default class extends Plugin {
-    trackedGames: Map<Lobby, TrackedGame>;
+    trackedRooms: Map<Room, TrackedRoom>;
+    socketToRoom: Map<ws, TrackedRoom>;
+    pingTimeout!: NodeJS.Timeout;
+    ipWhitelist!: string[];
     wsSocket: ws.Server;
 
     constructor(
         public readonly server: Worker,
-        public readonly config: any
+        public readonly config: AuproximityConfig
     ) {
         super(server, config);
 
-        this.trackedGames = new Map;
+        this.trackedRooms = new Map;
+        this.socketToRoom = new Map;
 
-        this.wsSocket = new ws.Server({ port: 22044 });
+        this.wsSocket = new ws.Server({
+            port: CUSTOM_SERVER_PORT,
+            host: this.config.host || "0.0.0.0"
+        });
         this.wsSocket.on("connection", (socket, req) => {
-            const ipAddr = (req.headers["x-forwarded-for"] as unknown as string || req.socket.remoteAddress) as unknown as string;
+            const ipAddr = req.socket.remoteAddress;
+
+            if (!ipAddr) {
+                socket.close();
+                return this.logger.warn("Could not get IP address from source, not connecting.");
+            }
+
+            if (this.ipWhitelist.length && !this.ipWhitelist.includes(ipAddr)) {
+                socket.close();
+                return this.logger.warn("Got message from non-whitelisted ip address: %s",
+                    ipAddr);
+            }
 
             socket.on("message", buffer => {
                 const data = buffer.toString("utf8");
@@ -53,26 +83,64 @@ export default class extends Plugin {
                 }
             });
         });
+
+        this.onConfigUpdate();
+    }
+
+    pingRooms() {
+        for (const [ , trackedRoom ] of this.trackedRooms) {
+            if (!trackedRoom.receivedPong) {
+                trackedRoom.socket.send(JSON.stringify({
+                    op: TransportOp.Error,
+                    d: {
+                        error: SocketError.FailedToPong
+                    }
+                }));
+                this.logger.info("Socket failed to pong last ping for room: %s",
+                    trackedRoom.room);
+                trackedRoom.socket.close();
+                continue;
+            }
+
+            trackedRoom.socket.send(JSON.stringify({
+                op: TransportOp.Ping,
+                d: {}
+            }));
+            trackedRoom.receivedPong = false;
+        }
+    }
+
+    async onConfigUpdate() {
+        this.pingTimeout = setInterval(this.pingRooms.bind(this), this.config.pingInterval || 10000);
+
+        this.ipWhitelist = [];
+        if (this.config.sourceWhitelist) {
+            for (const address of this.config.sourceWhitelist) {
+                const resolvedIp = await resolveDns(address);
+                this.ipWhitelist.push(...resolvedIp);
+            }
+        }
     }
 
     handleWSMessage(socket: ws, json: any) {
         switch (json.op) {
         case TransportOp.Hello:
-            const serverLobby = this.server.lobbies.get(json.d.gameCode);
-            if (serverLobby) {
-                if (this.trackedGames.get(serverLobby)) {
+            const serverRoom = this.server.rooms.get(json.d.gameCode);
+            if (serverRoom) {
+                if (this.trackedRooms.get(serverRoom)) {
                     socket.send(JSON.stringify({
                         op: TransportOp.Error,
                         d: {
-                            error: IdentifyError.AlreadyTracked,
+                            error: SocketError.AlreadyTracked,
                             gameCode: json.d.gameCode
                         }
                     }));
                     return;
                 }
 
-                const trackedGame = new TrackedGame(serverLobby,  socket);
-                this.trackedGames.set(serverLobby, trackedGame);
+                const trackedRoom = new TrackedRoom(serverRoom,  socket);
+                this.trackedRooms.set(serverRoom, trackedRoom);
+                this.socketToRoom.set(socket, trackedRoom);
 
                 socket.send(JSON.stringify({
                     op: TransportOp.Hello,
@@ -81,32 +149,45 @@ export default class extends Plugin {
                     }
                 }));
 
-                this.sendInitialState(trackedGame);
+                this.sendInitialState(trackedRoom);
+
+                this.logger.info("Began tracking game: %s",
+                    trackedRoom.room);
 
                 socket.on("close", () => {
-                    this.trackedGames.delete(serverLobby);
+                    this.trackedRooms.delete(serverRoom);
+                    this.socketToRoom.delete(socket);
+
+                    this.logger.info("Stopped tracking game: %s",
+                        trackedRoom.room);
                 });
             } else {
                 socket.send(JSON.stringify({
                     op: TransportOp.Error,
                     d: {
-                        error: IdentifyError.GameNotFound,
+                        error: SocketError.GameNotFound,
                         gameCode: json.d.gameCode
                     }
                 }));
             }
             break;
+        case TransportOp.Pong:
+            const trackedRoom = this.socketToRoom.get(socket);
+            if (trackedRoom) {
+                trackedRoom.receivedPong = true;
+            }
+            break;
         }
     }
 
-    sendInitialState(trackedGame: TrackedGame) {
+    sendInitialState(trackedGame: TrackedRoom) {
         const sendImpostors = [];
-        for (const [ , player ] of trackedGame.lobby.players) {
+        for (const [ , player ] of trackedGame.room.players) {
             if (player.info) {
                 trackedGame.socket.send(JSON.stringify({
                     op: TransportOp.PlayerUpdate,
                     d: {
-                        gameCode: trackedGame.lobby.code,
+                        gameCode: trackedGame.room.code,
                         clientId: player.id,
                         name: player.info.name,
                         color: player.info.color,
@@ -119,7 +200,7 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerKill,
                         d: {
-                            gameCode: trackedGame.lobby.code,
+                            gameCode: trackedGame.room.code,
                             clientId: player.id
                         }
                     }));
@@ -133,7 +214,7 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerMove,
                         d: {
-                            gameCode: trackedGame.lobby.code,
+                            gameCode: trackedGame.room.code,
                             clientId: player.id,
                             x: player.transform.position.x,
                             y: player.transform.position.y
@@ -145,7 +226,7 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerVentEnter,
                         d: {
-                            gameCode: trackedGame.lobby.code,
+                            gameCode: trackedGame.room.code,
                             clientId: player.id,
                             ventId: player.physics.ventid
                         }
@@ -158,7 +239,7 @@ export default class extends Plugin {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.ImpostorsUpdate,
                 d: {
-                    gameCode: trackedGame.lobby.code,
+                    gameCode: trackedGame.room.code,
                     clientIds: sendImpostors.map(player => player.id)
                 }
             }));
@@ -167,67 +248,67 @@ export default class extends Plugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.SettingsUpdate,
             d: {
-                gameCode: trackedGame.lobby.code,
-                map: trackedGame.lobby.settings.map,
-                crewmateVision: trackedGame.lobby.settings.crewmateVision
+                gameCode: trackedGame.room.code,
+                map: trackedGame.room.settings.map,
+                crewmateVision: trackedGame.room.settings.crewmateVision
             }
         }));
 
-        if (trackedGame.lobby.started) {
+        if (trackedGame.room.started) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.GameStart,
                 d: {
-                    gameCode: trackedGame.lobby.code
+                    gameCode: trackedGame.room.code
                 }
             }));
         }
 
-        if (trackedGame.lobby.meetinghud) {
+        if (trackedGame.room.meetinghud) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.MeetingStart,
                 d: {
-                    gameCode: trackedGame.lobby.code
+                    gameCode: trackedGame.room.code
                 }
             }));
         }
 
-        const shipstatus = trackedGame.lobby.shipstatus;
+        const shipstatus = trackedGame.room.shipstatus;
         if (shipstatus) {
-            const security = shipstatus.systems[SystemType.Security as keyof typeof shipstatus.systems] as unknown as SecurityCameraSystem<Lobby>;
+            const security = shipstatus.systems[SystemType.Security as keyof typeof shipstatus.systems] as unknown as SecurityCameraSystem<Room>;
             if (security) {
                 for (const player of security.players) {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.CamsPlayerJoin,
                         d: {
-                            gameCode: trackedGame.lobby.code,
+                            gameCode: trackedGame.room.code,
                             clientId: player.id
                         }
                     }));
                 }
             }
 
-            const comms = shipstatus.systems[SystemType.Communications as keyof typeof shipstatus.systems] as unknown as HudOverrideSystem<Lobby>;
+            const comms = shipstatus.systems[SystemType.Communications as keyof typeof shipstatus.systems] as unknown as HudOverrideSystem<Room>;
             if (comms.sabotaged) {
                 trackedGame.socket.send(JSON.stringify({
                     op: TransportOp.CommsSabotage,
                     d: {
-                        gameCode: trackedGame.lobby.code
+                        gameCode: trackedGame.room.code
                     }
                 }));
             }
         }
 
-        if (trackedGame.lobby.host?.id) {
+        if (trackedGame.room.host?.id) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.HostUpdate,
                 d: {
-                    gameCode: trackedGame.lobby.code,
-                    clientId: trackedGame.lobby.host.id
+                    gameCode: trackedGame.room.code,
+                    clientId: trackedGame.room.host.id
                 }
             }));
         } else {
             return this.logger.warn("Wanted to send host update for %s, but there was no host.",
-                trackedGame.lobby);
+                trackedGame.room);
         }
     }
 }

@@ -1,13 +1,13 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { PlayerStartMeetingEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "player.startmeeting")
-    onMeetingStart(ev: PlayerStartMeetingEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onMeetingStart(ev: PlayerStartMeetingEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
 
         if (!trackedGame)
             return;
@@ -15,7 +15,7 @@ export default class extends AuproximityPlugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.MeetingStart,
             d: {
-                gameCode: trackedGame.lobby.code
+                gameCode: trackedGame.room.code
             }
         }));
     }

@@ -1,13 +1,13 @@
-import { EventListener, Lobby } from "@skeldjs/hindenburg";
+import { EventListener, Room } from "@skeldjs/hindenburg";
 import { PlayerSetHostEvent } from "@skeldjs/core";
 
 import AuproximityPlugin from "../hbplugin-auproximity";
-import { TransportOp } from "../TrackedGame";
+import { TransportOp } from "../TrackedRoom";
 
 export default class extends AuproximityPlugin {
     @EventListener(AuproximityPlugin, "player.sethost")
-    onPlayerSetHost(ev: PlayerSetHostEvent<Lobby>) {
-        const trackedGame = this.trackedGames.get(ev.room);
+    onPlayerSetHost(ev: PlayerSetHostEvent<Room>) {
+        const trackedGame = this.trackedRooms.get(ev.room);
         
         if (!trackedGame)
             return;
@@ -15,7 +15,7 @@ export default class extends AuproximityPlugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.HostUpdate,
             d: {
-                gameCode: trackedGame.lobby.code,
+                gameCode: trackedGame.room.code,
                 clientId: ev.player.id,
             }
         }));
