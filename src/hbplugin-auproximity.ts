@@ -131,8 +131,7 @@ export default class extends Plugin {
                     socket.send(JSON.stringify({
                         op: TransportOp.Error,
                         d: {
-                            error: SocketError.AlreadyTracked,
-                            gameCode: json.d.gameCode
+                            error: SocketError.AlreadyTracked
                         }
                     }));
                     return;
@@ -144,9 +143,7 @@ export default class extends Plugin {
 
                 socket.send(JSON.stringify({
                     op: TransportOp.Hello,
-                    d: {
-                        gameCode: json.gameCode
-                    }
+                    d: {}
                 }));
 
                 this.sendInitialState(trackedRoom);
@@ -165,8 +162,7 @@ export default class extends Plugin {
                 socket.send(JSON.stringify({
                     op: TransportOp.Error,
                     d: {
-                        error: SocketError.GameNotFound,
-                        gameCode: json.d.gameCode
+                        error: SocketError.GameNotFound
                     }
                 }));
             }
@@ -187,7 +183,6 @@ export default class extends Plugin {
                 trackedGame.socket.send(JSON.stringify({
                     op: TransportOp.PlayerUpdate,
                     d: {
-                        gameCode: trackedGame.room.code,
                         clientId: player.id,
                         name: player.info.name,
                         color: player.info.color,
@@ -200,7 +195,6 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerKill,
                         d: {
-                            gameCode: trackedGame.room.code,
                             clientId: player.id
                         }
                     }));
@@ -214,7 +208,6 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerMove,
                         d: {
-                            gameCode: trackedGame.room.code,
                             clientId: player.id,
                             x: player.transform.position.x,
                             y: player.transform.position.y
@@ -226,7 +219,6 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.PlayerVentEnter,
                         d: {
-                            gameCode: trackedGame.room.code,
                             clientId: player.id,
                             ventId: player.physics.ventid
                         }
@@ -239,7 +231,6 @@ export default class extends Plugin {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.ImpostorsUpdate,
                 d: {
-                    gameCode: trackedGame.room.code,
                     clientIds: sendImpostors.map(player => player.id)
                 }
             }));
@@ -248,7 +239,6 @@ export default class extends Plugin {
         trackedGame.socket.send(JSON.stringify({
             op: TransportOp.SettingsUpdate,
             d: {
-                gameCode: trackedGame.room.code,
                 map: trackedGame.room.settings.map,
                 crewmateVision: trackedGame.room.settings.crewmateVision
             }
@@ -257,18 +247,14 @@ export default class extends Plugin {
         if (trackedGame.room.started) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.GameStart,
-                d: {
-                    gameCode: trackedGame.room.code
-                }
+                d: {}
             }));
         }
 
         if (trackedGame.room.meetinghud) {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.MeetingStart,
-                d: {
-                    gameCode: trackedGame.room.code
-                }
+                d: {}
             }));
         }
 
@@ -280,7 +266,6 @@ export default class extends Plugin {
                     trackedGame.socket.send(JSON.stringify({
                         op: TransportOp.CamsPlayerJoin,
                         d: {
-                            gameCode: trackedGame.room.code,
                             clientId: player.id
                         }
                     }));
@@ -291,9 +276,7 @@ export default class extends Plugin {
             if (comms.sabotaged) {
                 trackedGame.socket.send(JSON.stringify({
                     op: TransportOp.CommsSabotage,
-                    d: {
-                        gameCode: trackedGame.room.code
-                    }
+                    d: {}
                 }));
             }
         }
@@ -302,7 +285,6 @@ export default class extends Plugin {
             trackedGame.socket.send(JSON.stringify({
                 op: TransportOp.HostUpdate,
                 d: {
-                    gameCode: trackedGame.room.code,
                     clientId: trackedGame.room.host.id
                 }
             }));
